@@ -1,0 +1,187 @@
+import 'dart:io';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:dio/dio.dart';
+import 'package:dio_http2_adapter/dio_http2_adapter.dart';
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+
+class ApiService {
+  static bool _isSecure = true;
+  static const String noInternet = "No internet connection.";
+  static const String requestFailed = "Request failed with status";
+  static const String serverConnectivityFailed = "Failed to connect to the server.";
+
+  static final dio = Dio()
+    ..options.headers = {'Content-Type': 'application/json',}
+    ..options.baseUrl = 'https://pub.dev'
+    ..options.validateStatus = ((status) => status! < 500)
+    ..options.connectTimeout = Duration(milliseconds: 5000)
+    ..options.receiveTimeout = Duration(milliseconds: 3000)
+    ..interceptors.add(LogInterceptor())
+    ..httpClientAdapter = Http2Adapter(
+      ConnectionManager(
+        idleTimeout: Duration(seconds: 5),
+        // Ignore bad certificate
+        onClientCreate: (_, config) {
+          if (_isSecure) {
+            config.onBadCertificate = (_) => true;
+          }
+        },
+      ),
+    );
+
+  static Future<Response> get(String path,
+      {Map<String, dynamic>? params}) async {
+    try {
+      final response = await dio.get(
+        path,
+        queryParameters: params,
+      );
+      if (response.statusCode == 200) {
+        return response;
+      } else {
+        throw Exception('$requestFailed: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception(serverConnectivityFailed);
+    }
+  }
+
+  static Future<Response> post(String path, {required dynamic data}) async {
+    try {
+      final response = await dio.post(
+        path,
+        data: json.encode(data),
+      );
+      if (response.statusCode == 200) {
+        return response;
+      } else {
+        throw Exception('$requestFailed: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception(serverConnectivityFailed);
+    }
+  }
+
+  static Future<Response> put(String path, {required dynamic data}) async {
+    try {
+      final response = await dio.put(
+        path,
+        data: json.encode(data),
+      );
+      if (response.statusCode == 200) {
+        return response;
+      } else {
+        throw Exception('$requestFailed: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception(serverConnectivityFailed);
+    }
+  }
+
+  static Future<Response> delete(String path) async {
+    try {
+      final response = await dio.delete(path);
+      if (response.statusCode == 200) {
+        return response;
+      } else {
+        throw Exception('$requestFailed: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception(serverConnectivityFailed);
+    }
+  }
+
+  static Future<Response> uploadFile(String path, {required File file}) async {
+    if (await _checkInternetConnectivity()) {
+      try {
+        final formData = FormData.fromMap({
+          'file': await MultipartFile.fromFile(
+            file.path,
+            filename: file.path.split('/').last,
+          ),
+        });
+        final response = await dio.post(
+          path,
+          data: formData,
+          options: Options(
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          ),
+        );
+        if (response.statusCode == 200) {
+          return response;
+        } else {
+          throw Exception('$requestFailed: ${response.statusCode}');
+        }
+      } catch (e) {
+        throw Exception(serverConnectivityFailed);
+      }
+    } else {
+      throw Exception(noInternet);
+    }
+  }
+
+  static Future<void> downloadFile(
+      {required String url, required String savePath}) async {
+    if (await _checkInternetConnectivity()) {
+      try {
+        await dio.download(
+          url,
+          savePath,
+          onReceiveProgress: (received, total) {
+            if (total != -1) {
+              if (kDebugMode) {
+                print('${(received / total * 100).toStringAsFixed(0)}%');
+              }
+            }
+          },
+        );
+      } catch (e) {
+        throw Exception('Failed to download file from server.');
+      }
+    } else {
+      throw Exception(noInternet);
+    }
+  }
+
+  static Future<bool> _checkInternetConnectivity() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) {
+      return false;
+    }
+
+    if (connectivityResult == ConnectivityResult.mobile) {
+      // I am connected to a mobile network.
+    } else if (connectivityResult == ConnectivityResult.wifi) {
+      // I am connected to a wifi network.
+    } else if (connectivityResult == ConnectivityResult.ethernet) {
+      // I am connected to a ethernet network.
+    } else if (connectivityResult == ConnectivityResult.bluetooth) {
+      // I am connected to a bluetooth network.
+    } else if (connectivityResult == ConnectivityResult.other) {
+      // I am connected to a other network.
+    }
+    return true;
+  }
+
+  static void setSecure(bool isSecure) {
+    _isSecure = isSecure;
+  }
+
+  static String? _encodeData(Map<String, dynamic> data) {
+    // if (data == null) return null;
+    final json = jsonEncode(data);
+    return base64.encode(utf8.encode(json));
+  }
+
+  static dynamic _decodeData(String data) {
+    // if (data == null) return null;
+    final decodedData = utf8.decode(base64.decode(data));
+    return jsonDecode(decodedData);
+  }
+}
