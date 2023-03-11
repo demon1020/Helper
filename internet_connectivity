@@ -1,0 +1,21 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
+
+ static Future<bool> _checkInternetConnectivity() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) {
+      return false;
+    }
+
+    if (connectivityResult == ConnectivityResult.mobile) {
+      // I am connected to a mobile network.
+    } else if (connectivityResult == ConnectivityResult.wifi) {
+      // I am connected to a wifi network.
+    } else if (connectivityResult == ConnectivityResult.ethernet) {
+      // I am connected to a ethernet network.
+    } else if (connectivityResult == ConnectivityResult.bluetooth) {
+      // I am connected to a bluetooth network.
+    } else if (connectivityResult == ConnectivityResult.other) {
+      // I am connected to a other network.
+    }
+    return true;
+  }
