@@ -1,0 +1,5 @@
+# To change bundle id
+
+flutter pub global activate rename
+flutter pub global run rename --bundleId com.yourdomain.yourappname
+flutter pub global run rename --appname yourappname
