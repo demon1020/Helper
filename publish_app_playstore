@@ -1,0 +1,95 @@
+Publishing App on Play Store Set-up
+Step 1
+
+Reference the keystore from the app
+Create a file named [project]/android/key.properties that contains a reference to your keystore:
+storePassword=<password from previous step>
+keyPassword=<password from previous step>
+keyAlias=upload
+storeFile=<location of the key store file, such as /Users/<user name>/upload-keystore.jks>
+
+Step 2
+On Mac/Linux, use the following command:
+keytool -genkey -v -keystore ~/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+On Windows, use the following command:
+keytool -genkey -v -keystore c:\Users\USER_NAME\upload-keystore.jks -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+Step 3
+
+   def keystoreProperties = new Properties()
+   def keystorePropertiesFile = rootProject.file('key.properties')
+   if (keystorePropertiesFile.exists()) {
+       keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+   }
+
+  * android {
+         ...
+   } *
+
+Note: paste above * and delete from * to *
+
+Step 4
+Find the buildTypes block:
+   buildTypes {
+       release {
+           // TODO: Add your own signing config for the release build.
+           // Signing with the debug keys for now,
+           // so `flutter run --release` works.
+           signingConfig signingConfigs.debug
+       }
+   }
+
+And replace it with the following signing configuration info:
+   signingConfigs {
+       release {
+           keyAlias keystoreProperties['keyAlias']
+           keyPassword keystoreProperties['keyPassword']
+           storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+           storePassword keystoreProperties['storePassword']
+       }
+   }
+   buildTypes {
+       release {
+           signingConfig signingConfigs.release
+       }
+   }
+
+Generate APK
+Terminal : Run flutter build appbundle
+Terminal : Run flutter build apk --split-per-abi
+
+
+Ex : app/build.gradle
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('../key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+Above 
+android{}
+//for signed apk only else comment this and also comment signingConfig signingConfigs.release
+signingConfigs {
+    release {
+        keyAlias keystoreProperties['keyAlias']
+        keyPassword keystoreProperties['keyPassword']
+        storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+        storePassword keystoreProperties['storePassword']
+    }
+}
+
+buildTypes {
+    debug {
+        proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    }
+    release {
+        //signingConfig signingConfigs.debug
+        signingConfig signingConfigs.release
+
+        minifyEnabled true
+        shrinkResources true
+
+        proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+
+    }
+}
