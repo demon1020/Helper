@@ -1,0 +1,13 @@
+Create Native App Icons
+dependency : flutter_launcher_icons: ^0.9.2
+
+dev_dependencies:
+  flutter_launcher_icons: "^0.9.2"
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"
+Generate App Icons
+flutter pub get
+flutter pub run flutter_launcher_icons:main
